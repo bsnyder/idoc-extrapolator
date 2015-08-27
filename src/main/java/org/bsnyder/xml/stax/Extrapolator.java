@@ -22,14 +22,14 @@ public class Extrapolator {
 
     private final String dirname;
     private final int numberOfFiles;
-    private AtomicInteger counter;
+    private AtomicInteger counter = new AtomicInteger();
 
     public Extrapolator(String dirname, int numberOfFiles) {
         this.dirname = dirname;
         this.numberOfFiles = numberOfFiles;
     }
 
-    public synchronized void extrapolate() {
+    public synchronized void extrapolate() throws FileNotFoundException {
         final String[] xmlFiles = grabFilesFromDirectory(dirname);
         for(int i = 0; i < xmlFiles.length; ++i) {
             File oldFile = new File(xmlFiles[i]);
@@ -40,7 +40,7 @@ public class Extrapolator {
         }
     }
 
-    private String generateNewFileNameFromOldFileName(File oldFile) {
+    String generateNewFileNameFromOldFileName(File oldFile) {
         int fileNum = counter.incrementAndGet();
         String newFileName = null;
         if (fileNum < numberOfFiles) {
@@ -50,17 +50,24 @@ public class Extrapolator {
         return newFileName;
     }
 
-    private String[] grabFilesFromDirectory(String dirname) {
-        File dir = new File(dirname);
+    String[] grabFilesFromDirectory(String pathToDir) throws FileNotFoundException {
+        File dir = new File(pathToDir);
         String[] xmlFiles = null;
         if (dir.exists()) {
             xmlFiles = dir.list(new XmlFilesOnly());
-
+        } else {
+            throw new FileNotFoundException("Unable to locate directory '" + pathToDir + "'");
         }
         return xmlFiles;
     }
 
-    private void parseXmlFileAndWriteToNewFile(File xmlFileToParse, String newFileName) {
+    void parseXmlFileAndWriteToNewFile(File xmlFileToParse, String newFileName) throws FileNotFoundException {
+
+        if (!xmlFileToParse.exists()) {
+            throw new FileNotFoundException(" Unable to open file '" + xmlFileToParse.getPath() + "' because it does not exist");
+        } else if (!xmlFileToParse.isFile()) {
+            throw new FileNotFoundException("'" + xmlFileToParse.getPath() + "' is not a file");
+        }
 
         final String elementToMatch = "E1BPE1MATHEAD";
         final String materialElement = "MATERIAL";
@@ -84,38 +91,22 @@ public class Extrapolator {
                 XMLEvent event = eventReader.nextEvent();
 
                 if (event.isStartElement()) {
-                    StartElement startElement = event.asStartElement();
-                    String element = startElement.getName().toString();
-                    if (element.equals(elementToMatch)) {
-                        // The unique element has been located now find the <MATERIAL> element
-                        event = eventReader.nextEvent();
-                        if (event.isStartElement()) {
-                            startElement = event.asStartElement();
-                            element = startElement.getName().toString();
-                            if (element.equals(materialElement)) {
-                                // TODO: Locate and replace the <MATERIAL> element text with unique string "_BATCH_" + num
-                                Characters characters = event.asCharacters();
-                                String data = characters.getData();
-                                String newValue = data + "_BATCH_" + counter;
-                                writer.add(eventFactory.createCharacters(newValue));
-                            } else {
-                                // Write everything else to the new file
-                                writer.add(event);
-                            }
-                        }
-                    } else {
-                        // Write everything else to the new file
-                        writer.add(event);
-                    }
+                    locateElementAndReplace(elementToMatch, materialElement, writer, eventReader, eventFactory, event);
                 }
             }
+        inputStream.close();
+        writer.flush();
+        writer.close();
+
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (XMLStreamException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
+        }
+        /*
+        finally {
             try {
                 inputStream.close();
                 writer.flush();
@@ -128,13 +119,45 @@ public class Extrapolator {
                 e.printStackTrace();
             }
         }
+        */
     }
 
-    private void writeNewXmlFile() {
+    void locateElementAndReplace(String elementToMatch, String materialElement, XMLEventWriter writer, XMLEventReader eventReader, XMLEventFactory eventFactory, XMLEvent event) throws XMLStreamException {
+        StartElement startElement = event.asStartElement();
+        String element = startElement.getName().toString();
+        if (element.equals(elementToMatch)) {
+            // The unique element has been located now find the <MATERIAL> element
+            event = eventReader.nextEvent();
+            if (event.isStartElement()) {
+                startElement = event.asStartElement();
+                element = startElement.getName().toString();
+                if (element.equals(materialElement)) {
+                    replaceText(writer, eventFactory, event);
 
+                }
+                /*
+                // TODO Verifiy that the following is not needed
+                else {
+                    // Write everything else to the new file
+                    writer.add(event);
+                }
+                */
+            }
+        } else {
+            // Write everything else to the new file
+            writer.add(event);
+        }
     }
 
-    private class XmlFilesOnly implements FilenameFilter {
+    void replaceText(XMLEventWriter writer, XMLEventFactory eventFactory, XMLEvent event) throws XMLStreamException {
+        // Replace the <MATERIAL> element text with unique string "_BATCH_" + num
+        Characters characters = event.asCharacters();
+        String data = characters.getData();
+        String newValue = data + "_BATCH_" + counter;
+        writer.add(eventFactory.createCharacters(newValue));
+    }
+
+    class XmlFilesOnly implements FilenameFilter {
 
         @Override
         public boolean accept(File dir, String name) {
