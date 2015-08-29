@@ -11,15 +11,31 @@
  */
 package org.bsnyder.xml.stax;
 
-import javax.xml.stream.*;
+import javanet.staxutils.IndentingXMLEventWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.xml.stream.XMLEventFactory;
+import javax.xml.stream.XMLEventReader;
+import javax.xml.stream.XMLEventWriter;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.events.Characters;
-import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Extrapolator {
 
+    private final static Logger LOG = LoggerFactory.getLogger(Extrapolator.class);
     private final String dirname;
     private final int numberOfFiles;
     private AtomicInteger counter = new AtomicInteger();
@@ -33,9 +49,14 @@ public class Extrapolator {
         final String[] xmlFiles = grabFilesFromDirectory(dirname);
         for(int i = 0; i < xmlFiles.length; ++i) {
             File oldFile = new File(xmlFiles[i]);
-            if (oldFile.exists()) {
+            if (!oldFile.exists()) {
+                throw new FileNotFoundException(" Unable to open file '" + oldFile.getPath() + "' because it does not exist");
+            } else if (!oldFile.isFile()) {
+                throw new FileNotFoundException("'" + oldFile.getPath() + "' is not a file");
+            } else {
                 String newFileName = generateNewFileNameFromOldFileName(oldFile);
-                parseXmlFileAndWriteToNewFile(oldFile, newFileName);
+                File newFile = new File(newFileName);
+                parseOldFileAndWriteToNewFile(oldFile, newFile);
             }
         }
     }
@@ -61,37 +82,81 @@ public class Extrapolator {
         return xmlFiles;
     }
 
-    void parseXmlFileAndWriteToNewFile(File xmlFileToParse, String newFileName) throws FileNotFoundException {
+    void parseOldFileAndWriteToNewFile(File xmlFileToParse, File newFile) throws FileNotFoundException {
 
-        if (!xmlFileToParse.exists()) {
-            throw new FileNotFoundException(" Unable to open file '" + xmlFileToParse.getPath() + "' because it does not exist");
-        } else if (!xmlFileToParse.isFile()) {
-            throw new FileNotFoundException("'" + xmlFileToParse.getPath() + "' is not a file");
-        }
-
-        final String elementToMatch = "E1BPE1MATHEAD";
+        final String tabnamElement = "TABNAM";
+        final String e1pbe1matheadElement = "E1BPE1MATHEAD";
         final String materialElement = "MATERIAL";
 
         XMLInputFactory inputFactory = XMLInputFactory.newInstance();
         XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
         InputStream inputStream = null;
+        OutputStream outputStream = null;
         XMLEventWriter writer = null;
 
         try {
+            // Set up the IDoc to parse
             inputStream = new FileInputStream(xmlFileToParse);
+            outputStream = new FileOutputStream(newFile);
             XMLEventReader eventReader = inputFactory.createXMLEventReader(inputStream);
             XMLEventFactory eventFactory = XMLEventFactory.newInstance();
 
-            writer = outputFactory.createXMLEventWriter(new FileWriter(newFileName));
-
-            XMLEvent startEvent = eventFactory.createStartDocument();
-            writer.add(startEvent);
+            // Create the new file and hook up a writer to it
+            writer = new IndentingXMLEventWriter(outputFactory.createXMLEventWriter(outputStream, "UTF-8"));
 
             while(eventReader.hasNext()) {
                 XMLEvent event = eventReader.nextEvent();
-
                 if (event.isStartElement()) {
-                    locateElementAndReplace(elementToMatch, materialElement, writer, eventReader, eventFactory, event);
+                    // Is this is the <TABNAM> element?
+                    if (event.asStartElement().getName().getLocalPart().equals(tabnamElement)) {
+                        //Write the <TABNAM> start element
+                        write(writer, event);
+                        event = eventReader.nextEvent();
+                        if (event.isCharacters() && event.asCharacters().isCData()) {
+                            String cData = event.asCharacters().getData();
+                            // Write the CDATA
+                            write(writer, eventFactory.createCData(cData));
+                            event = eventReader.nextEvent();
+                            // Write the <TABNAM> end element
+                            write(writer, event);
+                            event = eventReader.nextEvent();
+                            // Write the newline event
+                            write(writer, event);
+                            event = eventReader.nextEvent();
+                        }
+                    }
+
+                    // Is this the <E1BPE1MATHEAD> element?
+                    if (event.asStartElement().getName().getLocalPart().equals(e1pbe1matheadElement)) {
+                        // The <E1BPE1MATHEAD> element has been located now find the <MATERIAL> element
+                        // Write the <E1BPE1MATHEAD> element
+                        write(writer, event);
+                        event = eventReader.nextEvent();
+                        // Write the newline event
+                        write(writer, event);
+                        event = eventReader.nextEvent();
+                        // Is this is the <MATERIAL> element?
+                        if (event.isStartElement() &&
+                                event.asStartElement().getName().getLocalPart().equals(materialElement)) {
+                            // This *is* the <MATERIAL> element so replace the ID
+                            // Write the <MATERIAL> start element
+                            write(writer, event);
+                            event = eventReader.nextEvent();
+                            // Append new string to the <MATERIAL> element text
+                            final Characters replacementText = appendMaterialElementText(eventFactory, eventReader, event);
+                            // Write the new ID to the new file
+                            write(writer, replacementText);
+                            event = eventReader.nextEvent();
+                            // Write the <MATERIAL> end element
+                            write(writer, event);
+                        } else {
+                            write(writer, event);
+                        }
+                    } else {
+                        write(writer, event);
+                    }
+                } else {
+                    write(writer, event);
                 }
             }
         inputStream.close();
@@ -105,56 +170,27 @@ public class Extrapolator {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        /*
-        finally {
-            try {
-                inputStream.close();
-                writer.flush();
-                writer.close();
-            } catch (IOException e) {
-                System.out.println("Trouble closing the InputStream");
-                e.printStackTrace();
-            } catch (XMLStreamException e) {
-                System.out.println("Trouble closing the XMLEventWriter");
-                e.printStackTrace();
-            }
-        }
-        */
     }
 
-    void locateElementAndReplace(String elementToMatch, String materialElement, XMLEventWriter writer, XMLEventReader eventReader, XMLEventFactory eventFactory, XMLEvent event) throws XMLStreamException {
-        StartElement startElement = event.asStartElement();
-        String element = startElement.getName().toString();
-        if (element.equals(elementToMatch)) {
-            // The unique element has been located now find the <MATERIAL> element
-            event = eventReader.nextEvent();
-            if (event.isStartElement()) {
-                startElement = event.asStartElement();
-                element = startElement.getName().toString();
-                if (element.equals(materialElement)) {
-                    replaceText(writer, eventFactory, event);
-
-                }
-                /*
-                // TODO Verifiy that the following is not needed
-                else {
-                    // Write everything else to the new file
-                    writer.add(event);
-                }
-                */
-            }
-        } else {
-            // Write everything else to the new file
-            writer.add(event);
-        }
+    private void write(XMLEventWriter writer, XMLEvent event) throws XMLStreamException {
+//        LOG.debug("Writing event: {}", event);
+        writer.add(event);
     }
 
-    void replaceText(XMLEventWriter writer, XMLEventFactory eventFactory, XMLEvent event) throws XMLStreamException {
-        // Replace the <MATERIAL> element text with unique string "_BATCH_" + num
-        Characters characters = event.asCharacters();
-        String data = characters.getData();
-        String newValue = data + "_BATCH_" + counter;
-        writer.add(eventFactory.createCharacters(newValue));
+    /**
+     * Append the &lt;MATERIAL&gt; element text with unique string "_BATCH_" + num
+     *
+     * @param eventFactory
+     * @param event
+     * @return
+     * @throws XMLStreamException
+     */
+    Characters appendMaterialElementText(XMLEventFactory eventFactory, XMLEventReader eventReader, XMLEvent event) throws XMLStreamException {
+        String origValue = event.asCharacters().getData();
+        LOG.debug("Original value: {}", origValue);
+        String newValue = origValue + "_BATCH_" + counter;
+        LOG.debug("New value: {}", newValue);
+        return eventFactory.createCharacters(newValue);
     }
 
     class XmlFilesOnly implements FilenameFilter {

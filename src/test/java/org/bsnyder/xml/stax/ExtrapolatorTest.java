@@ -49,7 +49,7 @@ public class ExtrapolatorTest {
    public void testParseXmlFileAndWriteToNewFile() throws Exception {
       String path = getClass().getClassLoader().getResource("idocs").getPath();
       ex = new Extrapolator(path, 2);
-      ex.parseXmlFileAndWriteToNewFile(new File(path + "/test-idoc.xml"), path + "dup-idoc.xml");
+      ex.parseOldFileAndWriteToNewFile(new File(path + "/test-idoc.xml"), new File(path + "/new-idoc.xml"));
       // TODO Verify that files have been written
    }
 
