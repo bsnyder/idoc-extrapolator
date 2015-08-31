@@ -33,6 +33,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * A utility to multiply a set of IDocs to grow them larger.
+ *
+ * @author bsnyder
+ */
 public class Extrapolator {
 
     private final static Logger LOG = LoggerFactory.getLogger(Extrapolator.class);
@@ -82,6 +87,13 @@ public class Extrapolator {
         return xmlFiles;
     }
 
+    /**
+     * This method is uuuuuugly -- don't hate me.
+     *
+     * @param xmlFileToParse
+     * @param newFile
+     * @throws FileNotFoundException
+     */
     void parseOldFileAndWriteToNewFile(File xmlFileToParse, File newFile) throws FileNotFoundException {
 
         final String tabnamElement = "TABNAM";

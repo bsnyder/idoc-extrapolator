@@ -1,17 +1,28 @@
 package org.bsnyder.xml.stax;
 
+import org.apache.commons.io.FileUtils;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathFactory;
 import java.io.File;
 import java.io.FileNotFoundException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class ExtrapolatorTest {
 
-   Extrapolator ex;
+   private final static Logger LOG = LoggerFactory.getLogger(ExtrapolatorTest.class);
+
+   private Extrapolator ex;
+   private String path = getClass().getClassLoader().getResource("idocs").getPath();
 
    public void grabFilesFromDirectory(String pathToDir) throws Exception {
       ex = new Extrapolator(pathToDir, 5);
@@ -35,7 +46,7 @@ public class ExtrapolatorTest {
 
    @Test
    public void testGenerateNewFileNameFromOldFileName() throws Exception {
-      String path = getClass().getClassLoader().getResource("idocs").getPath();
+//      String path = getClass().getClassLoader().getResource("idocs").getPath();
       ex = new Extrapolator(path, 5);
       String[] files = ex.grabFilesFromDirectory(path);
       assertNotNull(files);
@@ -47,10 +58,32 @@ public class ExtrapolatorTest {
 
    @Test
    public void testParseXmlFileAndWriteToNewFile() throws Exception {
-      String path = getClass().getClassLoader().getResource("idocs").getPath();
+      String testIdocName = "/test-idoc.xml";
+      String newIdocName = "/new-idoc.xml";
+      File testIdocFile = new File(path + testIdocName);
+      File newIdocFile = new File(path + newIdocName);
       ex = new Extrapolator(path, 2);
-      ex.parseOldFileAndWriteToNewFile(new File(path + "/test-idoc.xml"), new File(path + "/new-idoc.xml"));
-      // TODO Verify that files have been written
+      ex.parseOldFileAndWriteToNewFile(testIdocFile, newIdocFile);
+      assertTrue(testIdocFile.exists());
+      checkUniqueId(newIdocFile);
+      cleanUp(newIdocFile);
    }
+
+   private void checkUniqueId(File file) throws Exception {
+      DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+      DocumentBuilder builder = factory.newDocumentBuilder();
+      Document doc = builder.parse(file);
+      XPathFactory xPathfactory = XPathFactory.newInstance();
+      XPath xpath = xPathfactory.newXPath();
+      String xpathExpr = "ARTMAS07/IDOC/E1BPE1MATHEAD/MATERIAL/text()";
+      XPathExpression expr = xpath.compile(xpathExpr);
+      String actualText = (String) expr.evaluate(doc, XPathConstants.STRING);
+      assertEquals("000000000003051918_BATCH_0", actualText);
+   }
+
+   private void cleanUp(File file) {
+      FileUtils.deleteQuietly(file);
+   }
+
 
 }
