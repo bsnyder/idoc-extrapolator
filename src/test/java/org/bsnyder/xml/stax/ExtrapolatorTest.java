@@ -1,8 +1,6 @@
 package org.bsnyder.xml.stax;
 
-import com.google.common.base.Stopwatch;
 import org.apache.commons.io.FileUtils;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,9 +14,10 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class ExtrapolatorTest {
 
@@ -58,9 +57,6 @@ public class ExtrapolatorTest {
         String testIdocName = "test-idoc.xml";
         File testIdocFile = new File(inputPath + "/" + testIdocName);
         String newIdocName = "test-idoc_1.xml";
-//      assertNotNull(files);
-//      assertEquals(2, files.length);
-//      assertEquals("test-idoc.xml", files[0]);
         String newFileName = ex.generateNewFileNameFromOldFileName(testIdocFile);
         assertEquals(newIdocName, newFileName);
     }
@@ -85,9 +81,7 @@ public class ExtrapolatorTest {
         ex = new Extrapolator(inputPath, 2);
         ex.parseOldFileAndWriteToNewFile(testIdocFile, newIdocFile);
         assertTrue(testIdocFile.exists());
-//        LOG.debug("Asserting file {}", newIdocFile.getAbsolutePath());
         assertTrue(newIdocFile.exists());
-//        String newFileName = ex.generateNewFileNameFromOldFileName(testIdocFile);
         String existingId = extractId(testIdocFile);
         String expectedUniqueId = ex.createNewUniqueId(existingId);
         checkUniqueId(newIdocFile, expectedUniqueId);
@@ -101,12 +95,9 @@ public class ExtrapolatorTest {
         XPathFactory xPathfactory = XPathFactory.newInstance();
         XPath xpath = xPathfactory.newXPath();
 
-        Stopwatch stopwatch = Stopwatch.createStarted();
         String xpathExpr = "ARTMAS07/IDOC/E1BPE1MATHEAD/MATERIAL/text()";
         XPathExpression expr = xpath.compile(xpathExpr);
         String actualText = (String) expr.evaluate(doc, XPathConstants.STRING);
-        stopwatch.stop();
-//        LOG.debug("Elapsed time for XPath query: {}", stopwatch);
         return actualText;
     }
 
@@ -127,20 +118,15 @@ public class ExtrapolatorTest {
     }
 
     private void checkUniqueId(File file, String expectedUniqueId) throws Exception {
-        // Not sure how this will perform with large XML files
-//        LOG.debug("Checking for unique ID in file: {} and id: {}", file.getAbsolutePath(), expectedUniqueId);
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
         Document doc = builder.parse(file);
         XPathFactory xPathfactory = XPathFactory.newInstance();
         XPath xpath = xPathfactory.newXPath();
 
-        Stopwatch stopwatch = Stopwatch.createStarted();
         String xpathExpr = "ARTMAS07/IDOC/E1BPE1MATHEAD/MATERIAL/text()";
         XPathExpression expr = xpath.compile(xpathExpr);
         String actualText = (String) expr.evaluate(doc, XPathConstants.STRING);
-        stopwatch.stop();
-//        LOG.debug("Elapsed time for XPath query: {}", stopwatch);
 
         assertEquals(expectedUniqueId, actualText);
     }
@@ -148,6 +134,5 @@ public class ExtrapolatorTest {
     private void cleanUp(File file) {
         FileUtils.deleteQuietly(file);
     }
-
 
 }
