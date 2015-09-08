@@ -11,7 +11,6 @@
  */
 package org.bsnyder.xml.stax;
 
-import com.google.common.base.Stopwatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,16 +71,16 @@ public class Extrapolator {
     }
 
     public synchronized void extrapolate() throws IOException {
-        Stopwatch stopwatch = Stopwatch.createStarted();
         final String[] xmlFiles = grabFilesFromDirectory(inputDirectoryName);
         /*
          * 1) Loop over all XML files in the directory
          * 2) Divide the numberOfFilesToCreate by the xmlFiles.length to determine how many copies
          *    of each file needs to be created
-         * 3) Loop over each file to extrapolate it that many times
+         * 3) Loop over each file to duplicate it that many times, replacing the unique id
          */
         numberOfCopiesPerFile = totalNumberOfFilesToCreate / xmlFiles.length;
-        LOG.debug("Creating {} copies of each file", numberOfCopiesPerFile);
+        int totalCopies = numberOfCopiesPerFile * xmlFiles.length;
+        LOG.debug("Creating {} copies of each file for a total of {} copies", numberOfCopiesPerFile, totalCopies);
         for(int i = 0; i < xmlFiles.length; ++i) {
             fileCounter.set(0);
             for (int j = 0; j <= numberOfCopiesPerFile; ++j) {
@@ -102,8 +101,6 @@ public class Extrapolator {
                 }
             }
         }
-        stopwatch.stop();
-        LOG.debug("Elapsed time: {}", stopwatch);
     }
 
     String generateNewFileNameFromOldFileName(File oldFile) {
@@ -162,7 +159,6 @@ public class Extrapolator {
             // Create the new file and hook up a writer to it
             writer =  outputFactory.createXMLEventWriter(outputStream, "UTF-8");
 //            writer = new IndentingXMLEventWriter(outputFactory.createXMLEventWriter(outputStream, "UTF-8"));
-//            writer = new IndentingXMLEventWriter(outputFactory.createXMLEventWriter(System.out, "UTF-8"));
 
             while(eventReader.hasNext()) {
                 XMLEvent event = eventReader.nextEvent();
@@ -180,9 +176,6 @@ public class Extrapolator {
                             // Write the <TABNAM> end element
                             write(writer, event);
                             event = eventReader.nextEvent();
-                            // Write the newline event
-//                            write(writer, event);
-//                            event = eventReader.nextEvent();
                         }
                     }
 
@@ -192,9 +185,6 @@ public class Extrapolator {
                             // The <E1BPE1MATHEAD> element has been located now find the <MATERIAL> element
                             // Write the <E1BPE1MATHEAD> element
                             write(writer, event);
-//                            event = eventReader.nextEvent();
-                            // Write the newline event
-//                            write(writer, event);
                             event = eventReader.nextEvent();
                             // Is this is the <MATERIAL> element?
                             if (event.isStartElement() &&
@@ -204,10 +194,8 @@ public class Extrapolator {
                                 write(writer, event);
                                 event = eventReader.nextEvent();
                                 String existingId = event.asCharacters().getData();
-//                                LOG.debug("Found existing id: {}", existingId);
                                 // Append new id to the <MATERIAL> element text
                                 final String uniqueId = createNewUniqueId(existingId);
-//                                LOG.debug("Creating unique id: {}", uniqueId);
                                 final Characters characters = eventFactory.createCharacters(uniqueId);
                                 // Write the new ID to the new file
                                 write(writer, characters);
