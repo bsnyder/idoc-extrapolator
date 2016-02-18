@@ -4,7 +4,6 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
@@ -12,6 +11,7 @@ import java.io.IOException;
 
 public class ExtrapolatorApp {
 
+    private String extrapolatorType;
     private String inputDirectoryName;
     private int totalNumberOfFilesToCreate;
 
@@ -27,13 +27,18 @@ public class ExtrapolatorApp {
     }
 
     private void extrapolate() throws IOException {
-        Extrapolator ex = new Extrapolator(inputDirectoryName, totalNumberOfFilesToCreate);
+        Extrapolator ex = null;
+        if ("artmas".equalsIgnoreCase(extrapolatorType)) {
+            ex = new ArtmasExtrapolator(inputDirectoryName, totalNumberOfFilesToCreate);
+        } else if ("matmas".equalsIgnoreCase(extrapolatorType)) {
+            ex = new MatmasExtrapolator(inputDirectoryName, totalNumberOfFilesToCreate);
+        }
         ex.extrapolate();
     }
 
     private void printHelp(Options options) {
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp("extrapolator", options);
+        formatter.printHelp("ExtrapolatorApp", options);
 
     }
 
@@ -42,6 +47,7 @@ public class ExtrapolatorApp {
         CommandLine cmd = null;
         try {
             cmd = parser.parse(options, args);
+            this.extrapolatorType = cmd.getOptionValue('t');
             this.inputDirectoryName = cmd.getOptionValue('d');
             this.totalNumberOfFilesToCreate = new Integer(cmd.getOptionValue("f")).intValue();
         } catch (ParseException e) {
@@ -51,23 +57,9 @@ public class ExtrapolatorApp {
 
     private Options defineOptions() {
         return new Options()
+                .addOption("t", true, "The type of Extrapolator (supported types: Artmas or Matmas)")
                 .addOption("d", true, "The input directory where the IDocs live")
                 .addOption("f", true, "The total number of files to create");
-
-        /*
-        Option intputDirectoryNameOption = Option.builder("d")
-                .longOpt("inputDirectoryName")
-                .required(true)
-                .desc("The directory where the IDocs live")
-                .build();
-        opts.addOption(intputDirectoryNameOption);
-        Option totalNumberOfFilesToCreateOption = Option.builder("f")
-                .longOpt("totalNumberOfFilesToCreate")
-                .required(true)
-                .desc("The total number of files to create")
-                .build();
-        opts.addOption(totalNumberOfFilesToCreateOption);
-        */
     }
 
 }

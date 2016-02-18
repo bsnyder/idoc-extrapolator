@@ -1,3 +1,14 @@
+/*
+ * [y] hybris Platform
+ *
+ * Copyright (c) 2000-2016 hybris AG
+ * All rights reserved.
+ *
+ * This software is the confidential and proprietary information of hybris
+ * ("Confidential Information"). You shall not disclose such Confidential
+ * Information and shall use it only in accordance with the terms of the
+ * license agreement you entered into with hybris.
+ */
 package org.bsnyder.xml.stax;
 
 import org.apache.commons.io.FileUtils;
@@ -19,21 +30,21 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class ExtrapolatorTest {
+public class ArtmasExtrapolatorTest {
 
-    private final static Logger LOG = LoggerFactory.getLogger(ExtrapolatorTest.class);
+    private final static Logger LOG = LoggerFactory.getLogger(ArtmasExtrapolatorTest.class);
 
     private String inputPath = getClass().getClassLoader().getResource("artmas-idocs").getPath() + "/";
     private String outputPath = inputPath + "/output";
     private Extrapolator ex;
 
-    public ExtrapolatorTest() {
+    public ArtmasExtrapolatorTest() {
         File outputDir = new File(outputPath);
         outputDir.mkdir();
     }
 
     public void grabFilesFromDirectory(String pathToDir) throws Exception {
-        ex = new DefaultExtrapolator(pathToDir, 5);
+        ex = new ArtmasExtrapolator(pathToDir, 5);
         assertNotNull(ex);
         String[] files = ex.grabFilesFromDirectory(pathToDir);
         assertNotNull(files);
@@ -53,7 +64,7 @@ public class ExtrapolatorTest {
 
     @Test
     public void testGenerateNewFileNameFromOldFileName() throws Exception {
-        ex = new DefaultExtrapolator(inputPath, 1);
+        ex = new ArtmasExtrapolator(inputPath, 1);
         String testIdocName = "test-idoc.xml";
         File testIdocFile = new File(inputPath + "/" + testIdocName);
         String newIdocName = "test-idoc_1.xml";
@@ -61,7 +72,6 @@ public class ExtrapolatorTest {
         assertEquals(newIdocName, newFileName);
     }
 
-    /*
     @Test
     public void testParseSmallXmlFileAndWriteNewFile() throws Exception {
         String testIdocName = "test-idoc.xml";
@@ -79,7 +89,7 @@ public class ExtrapolatorTest {
     private void parseXmlFileandWriteNewFile(String testIdocName, String newIdocName) throws Exception {
         File testIdocFile = new File(inputPath + "/" + testIdocName);
         File newIdocFile = new File(outputPath + "/" + newIdocName);
-        ex = new Extrapolator(inputPath, 2);
+        ex = new ArtmasExtrapolator(inputPath, 2);
         ex.parseOldFileAndWriteToNewFile(testIdocFile, newIdocFile);
         assertTrue(testIdocFile.exists());
         assertTrue(newIdocFile.exists());
@@ -105,7 +115,7 @@ public class ExtrapolatorTest {
     @Test
     public void testExtrapolate() throws Exception {
         int numberOfIdocs = 129;
-        ex = new Extrapolator(inputPath, numberOfIdocs);
+        ex = new ArtmasExtrapolator(inputPath, numberOfIdocs);
         ex.extrapolate();
         File dir = new File(outputPath);
         String[] xmlFilesOutput = null;
@@ -131,22 +141,9 @@ public class ExtrapolatorTest {
 
         assertEquals(expectedUniqueId, actualText);
     }
-    */
 
     private void cleanUp(File file) {
         FileUtils.deleteQuietly(file);
-    }
-
-    private class DefaultExtrapolator extends Extrapolator {
-
-        public DefaultExtrapolator(String inputDirectoryName, int totalNumberOfFilesToCreate) throws FileNotFoundException {
-            super(inputDirectoryName, totalNumberOfFilesToCreate);
-        }
-
-        @Override
-        void parseOldFileAndWriteToNewFile(File xmlFileToParse, File newFile) throws FileNotFoundException {
-            // Null impl
-        }
     }
 
 }

@@ -1,3 +1,14 @@
+/*
+ * [y] hybris Platform
+ *
+ * Copyright (c) 2000-2016 hybris AG
+ * All rights reserved.
+ *
+ * This software is the confidential and proprietary information of hybris
+ * ("Confidential Information"). You shall not disclose such Confidential
+ * Information and shall use it only in accordance with the terms of the
+ * license agreement you entered into with hybris.
+ */
 package org.bsnyder.xml.stax;
 
 import org.apache.commons.io.FileUtils;
@@ -13,73 +24,44 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 import java.io.File;
-import java.io.FileNotFoundException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class ExtrapolatorTest {
+public class MatmasExtrapolatorTest {
 
-    private final static Logger LOG = LoggerFactory.getLogger(ExtrapolatorTest.class);
+    private final static Logger LOG = LoggerFactory.getLogger(MatmasExtrapolatorTest.class);
 
-    private String inputPath = getClass().getClassLoader().getResource("artmas-idocs").getPath() + "/";
-    private String outputPath = inputPath + "/output";
+    private String inputPath = getClass().getClassLoader().getResource("matmas-idocs").getPath() + "/";
+    private String outputPath = inputPath + "output";
     private Extrapolator ex;
 
-    public ExtrapolatorTest() {
+    public MatmasExtrapolatorTest() {
         File outputDir = new File(outputPath);
+        LOG.debug("Creating dir '{}'", outputPath);
         outputDir.mkdir();
     }
 
-    public void grabFilesFromDirectory(String pathToDir) throws Exception {
-        ex = new DefaultExtrapolator(pathToDir, 5);
+    private void grabFilesFromDirectory(String pathToDir) throws Exception {
+        ex = new MatmasExtrapolator(pathToDir, 5);
         assertNotNull(ex);
         String[] files = ex.grabFilesFromDirectory(pathToDir);
         assertNotNull(files);
-        assertEquals(3, files.length);
+        assertEquals(4, files.length);
     }
 
     @Test
-    public void testGrabFilesFromDirectory() throws Exception {
-        String path = getClass().getClassLoader().getResource("artmas-idocs").getPath();
-        grabFilesFromDirectory(path);
-    }
-
-    @Test(expected = FileNotFoundException.class)
-    public void testGrabFilesFromDirectoryWithBadDirectoryName() throws Exception {
-        grabFilesFromDirectory("foo");
-    }
-
-    @Test
-    public void testGenerateNewFileNameFromOldFileName() throws Exception {
-        ex = new DefaultExtrapolator(inputPath, 1);
-        String testIdocName = "test-idoc.xml";
-        File testIdocFile = new File(inputPath + "/" + testIdocName);
-        String newIdocName = "test-idoc_1.xml";
-        String newFileName = ex.generateNewFileNameFromOldFileName(testIdocFile);
-        assertEquals(newIdocName, newFileName);
-    }
-
-    /*
-    @Test
-    public void testParseSmallXmlFileAndWriteNewFile() throws Exception {
-        String testIdocName = "test-idoc.xml";
-        String newIdocName = "new-idoc.xml";
-        parseXmlFileandWriteNewFile(testIdocName, newIdocName);
-    }
-
-    @Test
-    public void testParseMediumXmlFileAndWriteNewFile() throws Exception {
-        String testIdocName = "O_701_0000001352676640.xml";
-        String newIdocName = "O_701_0000001352676640_1.xml";
+    public void testParseXmlFileAndWriteNewFile() throws Exception {
+        String testIdocName = "MATMAS05_0000000004970786_BES_MAT_0000533.xml";
+        String newIdocName = "MATMAS05_test.xml";
         parseXmlFileandWriteNewFile(testIdocName, newIdocName);
     }
 
     private void parseXmlFileandWriteNewFile(String testIdocName, String newIdocName) throws Exception {
         File testIdocFile = new File(inputPath + "/" + testIdocName);
         File newIdocFile = new File(outputPath + "/" + newIdocName);
-        ex = new Extrapolator(inputPath, 2);
+        ex = new MatmasExtrapolator(inputPath, 2);
         ex.parseOldFileAndWriteToNewFile(testIdocFile, newIdocFile);
         assertTrue(testIdocFile.exists());
         assertTrue(newIdocFile.exists());
@@ -96,7 +78,7 @@ public class ExtrapolatorTest {
         XPathFactory xPathfactory = XPathFactory.newInstance();
         XPath xpath = xPathfactory.newXPath();
 
-        String xpathExpr = "ARTMAS07/IDOC/E1BPE1MATHEAD/MATERIAL/text()";
+        String xpathExpr = "MATMAS05/IDOC/EDI_DC40/DOCNUM/text()";
         XPathExpression expr = xpath.compile(xpathExpr);
         String actualText = (String) expr.evaluate(doc, XPathConstants.STRING);
         return actualText;
@@ -104,8 +86,8 @@ public class ExtrapolatorTest {
 
     @Test
     public void testExtrapolate() throws Exception {
-        int numberOfIdocs = 129;
-        ex = new Extrapolator(inputPath, numberOfIdocs);
+        int numberOfIdocs = 12;
+        ex = new MatmasExtrapolator(inputPath, numberOfIdocs);
         ex.extrapolate();
         File dir = new File(outputPath);
         String[] xmlFilesOutput = null;
@@ -125,28 +107,15 @@ public class ExtrapolatorTest {
         XPathFactory xPathfactory = XPathFactory.newInstance();
         XPath xpath = xPathfactory.newXPath();
 
-        String xpathExpr = "ARTMAS07/IDOC/E1BPE1MATHEAD/MATERIAL/text()";
+        String xpathExpr = "MATMAS05/IDOC/EDI_DC40/DOCNUM/text()";
         XPathExpression expr = xpath.compile(xpathExpr);
         String actualText = (String) expr.evaluate(doc, XPathConstants.STRING);
 
         assertEquals(expectedUniqueId, actualText);
     }
-    */
 
     private void cleanUp(File file) {
         FileUtils.deleteQuietly(file);
-    }
-
-    private class DefaultExtrapolator extends Extrapolator {
-
-        public DefaultExtrapolator(String inputDirectoryName, int totalNumberOfFilesToCreate) throws FileNotFoundException {
-            super(inputDirectoryName, totalNumberOfFilesToCreate);
-        }
-
-        @Override
-        void parseOldFileAndWriteToNewFile(File xmlFileToParse, File newFile) throws FileNotFoundException {
-            // Null impl
-        }
     }
 
 }
