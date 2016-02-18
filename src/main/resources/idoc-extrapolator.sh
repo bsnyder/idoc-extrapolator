@@ -5,5 +5,5 @@ if [ $# -eq 0 ]; then
     java -jar ./target/idoc-extrapolator-1.0-SNAPSHOT-jar-with-dependencies.jar
 else
     # Pass args to the app
-    java -jar ./target/idoc-extrapolator-1.0-SNAPSHOT-jar-with-dependencies.jar -d $1 -f $2
+    java -jar ./target/idoc-extrapolator-1.0-SNAPSHOT-jar-with-dependencies.jar -t $1 -d $2 -f $3
 fi
