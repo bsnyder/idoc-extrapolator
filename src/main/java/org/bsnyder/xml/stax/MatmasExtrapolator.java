@@ -34,8 +34,6 @@ public class MatmasExtrapolator extends Extrapolator {
         LOG.debug("Parsing existing doc: {}", xmlFileToParse.getAbsolutePath());
         LOG.debug("Creating new doc: {}", newFile.getAbsolutePath());
 
-        final String docNumElementName = "DOCNUM";
-
         XMLInputFactory inputFactory = XMLInputFactory.newInstance();
         XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
         InputStream inputStream = null;
@@ -59,11 +57,13 @@ public class MatmasExtrapolator extends Extrapolator {
 
                 switch(eventType) {
                     case XMLEvent.START_ELEMENT:
+                        final String docNumElementName = "MATNR";
+                        // Is this the MATNR element?
                         if (event.asStartElement().getName().getLocalPart().equals(docNumElementName)) {
-                            LOG.debug("Found the DOCNUM element!");
-                            // Write the DOCNUM element
+                            LOG.debug("Found the MATNR element!");
+                            // Write the MATNR element
                             write(writer, event);
-                            // Grab the next event (should be the DOCNUM content) as characters
+                            // Grab the next event (should be the MATNR content) as characters
                             event = eventReader.nextEvent();
                             String existingId = event.asCharacters().getData();
                             // Create a new unique ID for the document
@@ -78,44 +78,6 @@ public class MatmasExtrapolator extends Extrapolator {
                     default:
                         write(writer, event);
                 }
-                /*
-                if (event.isStartElement()) {
-
-                    // Is this the MATMAS05 element?
-//                    LOG.debug("Event: {}", event.asStartElement().getName().getLocalPart());
-                    if (!event.asStartElement().getName().getLocalPart().equals(docNumElementName)){
-                        write(writer, event);
-                        /-*
-                        event = eventReader.nextEvent();
-                        // Is this the IDOC element?
-                        LOG.debug("2) Event: {}", event.asStartElement().getName().getLocalPart());
-                        if (event.asStartElement().getName().getLocalPart().equals(idocElementName)) {
-                           write(writer, event);
-                            event = eventReader.nextEvent();
-                        }
-                        *-/
-                    } else {
-                        // This should be the DOCNUM element
-//                        LOG.debug("Event: {}", event.asStartElement().getName().getLocalPart());
-                        if (event.asStartElement().getName().getLocalPart().equals(docNumElementName)) {
-                            LOG.debug("Found the DOCNUM element!");
-                            // Write the DOCNUM element
-                            write(writer, event);
-                            // Grab the next event (should be the DOCNUM content) as characters
-                            event = eventReader.nextEvent();
-                            String existingId = event.asCharacters().getData();
-                            // Create a new unique ID for the document
-                            final String uniqueId = createNewUniqueId(existingId);
-                            final Characters characters = eventFactory.createCharacters(uniqueId);
-                            // Write the new ID to the new file
-                            write(writer, characters);
-                        }
-                    }
-                } else {
-                    LOG.debug("Writing event: {}", event);
-                    write(writer, event);
-                }
-                */
             }
 
         } catch (XMLStreamException e) {
@@ -125,6 +87,6 @@ public class MatmasExtrapolator extends Extrapolator {
 
     @Override
     String createNewUniqueId(String existingId) {
-        return "4970786_" + fileCounter;
+        return "ACT-BCD-26_" + fileCounter;
     }
 }
