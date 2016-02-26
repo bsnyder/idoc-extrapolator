@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class Extrapolator {
 
     private final static Logger LOG = LoggerFactory.getLogger(Extrapolator.class);
+
     private String inputDirectoryName = null;
     private String outputDirectoryName = null;
     private int totalNumberOfFilesToCreate = 0;
@@ -108,19 +109,24 @@ public abstract class Extrapolator {
     }
 
 
+    /**
+     * Override this method to implement the XML element handling according to the document type (e.g., ARTMAS, MATMAS, etc.)
+     * @param xmlFileToParse
+     * @param newFile
+     * @throws FileNotFoundException
+     */
     abstract void parseOldFileAndWriteToNewFile(File xmlFileToParse, File newFile) throws FileNotFoundException;
+
+    /**
+     * Override this method to create a unique ID to use as the primary key
+     * @param existingId
+     * @return
+     */
+    abstract String createNewUniqueId(String existingId);
 
     void write(XMLEventWriter writer, XMLEvent event) throws XMLStreamException {
 //        LOG.debug("Writing event: {}", event);
         writer.add(event);
-    }
-
-    /**
-     * Append the &lt;MATERIAL&gt; element text with unique string "_BATCH_" + num
-     */
-    String createNewUniqueId(String existingId) {
-        String newValue = existingId + "_BATCH_" + fileCounter;
-        return newValue;
     }
 
     static class XmlFilesOnly implements FilenameFilter {

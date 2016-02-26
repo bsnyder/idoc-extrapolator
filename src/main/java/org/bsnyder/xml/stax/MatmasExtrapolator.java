@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -31,8 +32,8 @@ public class MatmasExtrapolator extends Extrapolator {
 
     @Override
     void parseOldFileAndWriteToNewFile(File xmlFileToParse, File newFile) throws FileNotFoundException {
-        LOG.debug("Parsing existing doc: {}", xmlFileToParse.getAbsolutePath());
-        LOG.debug("Creating new doc: {}", newFile.getAbsolutePath());
+//        LOG.debug("Parsing existing doc: {}", xmlFileToParse.getAbsolutePath());
+//        LOG.debug("Creating new doc: {}", newFile.getAbsolutePath());
 
         XMLInputFactory inputFactory = XMLInputFactory.newInstance();
         XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
@@ -60,7 +61,7 @@ public class MatmasExtrapolator extends Extrapolator {
                         final String docNumElementName = "MATNR";
                         // Is this the MATNR element?
                         if (event.asStartElement().getName().getLocalPart().equals(docNumElementName)) {
-                            LOG.debug("Found the MATNR element!");
+//                            LOG.debug("Found the MATNR element!");
                             // Write the MATNR element
                             write(writer, event);
                             // Grab the next event (should be the MATNR content) as characters
@@ -79,14 +80,19 @@ public class MatmasExtrapolator extends Extrapolator {
                         write(writer, event);
                 }
             }
+            inputStream.close();
+            writer.flush();
+            writer.close();
 
         } catch (XMLStreamException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     @Override
     String createNewUniqueId(String existingId) {
-        return "ACT-BCD-26_" + fileCounter;
+        return existingId + "_BATCH_" + fileCounter;
     }
 }

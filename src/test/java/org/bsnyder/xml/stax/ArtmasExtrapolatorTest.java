@@ -19,12 +19,18 @@ import org.w3c.dom.Document;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.StringWriter;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -94,8 +100,8 @@ public class ArtmasExtrapolatorTest {
         assertTrue(testIdocFile.exists());
         assertTrue(newIdocFile.exists());
         String existingId = extractId(testIdocFile);
-        String expectedUniqueId = ex.createNewUniqueId(existingId);
-        checkUniqueId(newIdocFile, expectedUniqueId);
+        String newId = ex.createNewUniqueId(existingId);
+        assertTrue(newId.matches(existingId + "_BATCH_\\d{0,100}"));
         cleanUp(newIdocFile);
     }
 
@@ -103,18 +109,34 @@ public class ArtmasExtrapolatorTest {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
         Document doc = builder.parse(file);
+
+/*
+        // begin debugging
+        DOMSource domSource = new DOMSource(doc);
+        StringWriter writer = new StringWriter();
+        StreamResult result = new StreamResult(writer);
+        TransformerFactory tf = TransformerFactory.newInstance();
+        Transformer transformer = tf.newTransformer();
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+        transformer.transform(domSource, result);
+        writer.flush();
+        LOG.debug(writer.toString());
+        // end debugging
+*/
+
         XPathFactory xPathfactory = XPathFactory.newInstance();
         XPath xpath = xPathfactory.newXPath();
 
-        String xpathExpr = "ARTMAS07/IDOC/E1BPE1MATHEAD/MATERIAL/text()";
-        XPathExpression expr = xpath.compile(xpathExpr);
-        String actualText = (String) expr.evaluate(doc, XPathConstants.STRING);
+        String exprString = "ARTMAS07/IDOC/E1BPE1MATHEAD/MATERIAL/text()";
+        XPathExpression xpathExpr = xpath.compile(exprString);
+        String actualText = (String) xpathExpr.evaluate(doc, XPathConstants.STRING);
         return actualText;
     }
 
     @Test
     public void testExtrapolate() throws Exception {
-        int numberOfIdocs = 129;
+        int numberOfIdocs = 12;
         ex = new ArtmasExtrapolator(inputPath, numberOfIdocs);
         ex.extrapolate();
         File dir = new File(outputPath);
@@ -125,21 +147,8 @@ public class ArtmasExtrapolatorTest {
         String[] xmlFilesInput = ex.grabFilesFromDirectory(inputPath);
         int numberOfCopiesPerFile = numberOfIdocs / xmlFilesInput.length;
         int expectedNumberOfXmlFiles = xmlFilesInput.length * numberOfCopiesPerFile;
-        assertEquals(expectedNumberOfXmlFiles, xmlFilesOutput.length);
-    }
-
-    private void checkUniqueId(File file, String expectedUniqueId) throws Exception {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        Document doc = builder.parse(file);
-        XPathFactory xPathfactory = XPathFactory.newInstance();
-        XPath xpath = xPathfactory.newXPath();
-
-        String xpathExpr = "ARTMAS07/IDOC/E1BPE1MATHEAD/MATERIAL/text()";
-        XPathExpression expr = xpath.compile(xpathExpr);
-        String actualText = (String) expr.evaluate(doc, XPathConstants.STRING);
-
-        assertEquals(expectedUniqueId, actualText);
+        String errorMsg = "Found '" + xmlFilesOutput.length + "' XML files in dir: '"  + inputPath + "'";
+        assertEquals(errorMsg, expectedNumberOfXmlFiles, xmlFilesOutput.length);
     }
 
     private void cleanUp(File file) {

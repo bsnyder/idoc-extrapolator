@@ -60,25 +60,11 @@ public class ArtmasExtrapolator extends Extrapolator {
 
             while(eventReader.hasNext()) {
                 XMLEvent event = eventReader.nextEvent();
-                if (event.isStartElement()) {
-                    // Is this is the <TABNAM> element?
-                    if (event.asStartElement().getName().getLocalPart().equals(tabnamElement)) {
-                        //Write the <TABNAM> start element
-                        write(writer, event);
-                        event = eventReader.nextEvent();
-                        if (event.isCharacters() && event.asCharacters().isCData()) {
-                            String cData = event.asCharacters().getData();
-                            // Write the CDATA
-                            write(writer, eventFactory.createCData(cData));
-                            event = eventReader.nextEvent();
-                            // Write the <TABNAM> end element
-                            write(writer, event);
-                            event = eventReader.nextEvent();
-                        }
-                    }
 
-                    if (event.isStartElement()) {
-                        // Is this the <E1BPE1MATHEAD> element?
+                int eventType = event.getEventType();
+
+                switch (eventType) {
+                    case XMLEvent.START_ELEMENT:
                         if (event.asStartElement().getName().getLocalPart().equals(e1pbe1matheadElement)) {
                             // The <E1BPE1MATHEAD> element has been located now find the <MATERIAL> element
                             // Write the <E1BPE1MATHEAD> element
@@ -106,9 +92,6 @@ public class ArtmasExtrapolator extends Extrapolator {
                         } else {
                             write(writer, event);
                         }
-                    }
-                } else {
-                    write(writer, event);
                 }
             }
             inputStream.close();
@@ -122,6 +105,11 @@ public class ArtmasExtrapolator extends Extrapolator {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    String createNewUniqueId(String existingId) {
+        return existingId + "_BATCH_" + fileCounter;
     }
 
 }

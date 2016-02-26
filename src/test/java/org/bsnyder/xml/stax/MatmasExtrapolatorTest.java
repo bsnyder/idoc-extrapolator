@@ -39,7 +39,6 @@ public class MatmasExtrapolatorTest {
 
     public MatmasExtrapolatorTest() {
         File outputDir = new File(outputPath);
-        LOG.debug("Creating dir '{}'", outputPath);
         outputDir.mkdir();
     }
 
@@ -66,8 +65,8 @@ public class MatmasExtrapolatorTest {
         assertTrue(testIdocFile.exists());
         assertTrue(newIdocFile.exists());
         String existingId = extractId(testIdocFile);
-        String expectedUniqueId = ex.createNewUniqueId(existingId);
-        checkUniqueId(newIdocFile, expectedUniqueId);
+        String newId = ex.createNewUniqueId(existingId);
+        assertTrue(newId.matches(existingId + "_BATCH_\\d{0,100}"));
         cleanUp(newIdocFile);
     }
 
@@ -75,12 +74,28 @@ public class MatmasExtrapolatorTest {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
         Document doc = builder.parse(file);
+
+/*
+        // begin debugging
+        DOMSource domSource = new DOMSource(doc);
+        StringWriter writer = new StringWriter();
+        StreamResult result = new StreamResult(writer);
+        TransformerFactory tf = TransformerFactory.newInstance();
+        Transformer transformer = tf.newTransformer();
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+        transformer.transform(domSource, result);
+        writer.flush();
+        LOG.debug(writer.toString());
+        // end debugging
+*/
+
         XPathFactory xPathfactory = XPathFactory.newInstance();
         XPath xpath = xPathfactory.newXPath();
 
-        String xpathExpr = "MATMAS05/IDOC/E1MARAM/MATNR/text()";
-        XPathExpression expr = xpath.compile(xpathExpr);
-        String actualText = (String) expr.evaluate(doc, XPathConstants.STRING);
+        String exprString = "MATMAS05/IDOC/E1MARAM/MATNR/text()";
+        XPathExpression xpathExpr = xpath.compile(exprString);
+        String actualText = (String) xpathExpr.evaluate(doc, XPathConstants.STRING);
         return actualText;
     }
 
@@ -99,20 +114,6 @@ public class MatmasExtrapolatorTest {
         int expectedNumberOfXmlFiles = xmlFilesInput.length * numberOfCopiesPerFile;
         String errorMsg = "Found '" + xmlFilesOutput.length + "' XML files in dir: '"  + inputPath + "'";
         assertEquals(errorMsg, expectedNumberOfXmlFiles, xmlFilesOutput.length);
-    }
-
-    private void checkUniqueId(File file, String expectedUniqueId) throws Exception {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        Document doc = builder.parse(file);
-        XPathFactory xPathfactory = XPathFactory.newInstance();
-        XPath xpath = xPathfactory.newXPath();
-
-        String xpathExpr = "MATMAS05/IDOC/E1MARAM/MATNR/text()";
-        XPathExpression expr = xpath.compile(xpathExpr);
-        String actualText = (String) expr.evaluate(doc, XPathConstants.STRING);
-
-        assertEquals(expectedUniqueId, actualText);
     }
 
     private void cleanUp(File file) {
