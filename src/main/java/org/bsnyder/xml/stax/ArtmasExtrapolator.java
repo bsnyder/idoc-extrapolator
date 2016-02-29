@@ -37,10 +37,6 @@ public class ArtmasExtrapolator extends Extrapolator {
 //        LOG.debug("Parsing existing doc: {}", xmlFileToParse.getAbsolutePath());
 //        LOG.debug("Creating new doc: {}", newFile.getAbsolutePath());
 
-        final String tabnamElement = "TABNAM";
-        final String e1pbe1matheadElement = "E1BPE1MATHEAD";
-        final String materialElement = "MATERIAL";
-
         XMLInputFactory inputFactory = XMLInputFactory.newInstance();
         XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
         InputStream inputStream = null;
@@ -65,6 +61,10 @@ public class ArtmasExtrapolator extends Extrapolator {
 
                 switch (eventType) {
                     case XMLEvent.START_ELEMENT:
+                        final String tabnamElement = "TABNAM";
+                        final String e1pbe1matheadElement = "E1BPE1MATHEAD";
+                        final String materialElement = "MATERIAL";
+
                         if (event.asStartElement().getName().getLocalPart().equals(e1pbe1matheadElement)) {
                             // The <E1BPE1MATHEAD> element has been located now find the <MATERIAL> element
                             // Write the <E1BPE1MATHEAD> element

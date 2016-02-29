@@ -58,9 +58,10 @@ public class MatmasExtrapolator extends Extrapolator {
 
                 switch(eventType) {
                     case XMLEvent.START_ELEMENT:
-                        final String docNumElementName = "MATNR";
+                        final String matNrElementName = "MATNR";
+
                         // Is this the MATNR element?
-                        if (event.asStartElement().getName().getLocalPart().equals(docNumElementName)) {
+                        if (event.asStartElement().getName().getLocalPart().equals(matNrElementName)) {
 //                            LOG.debug("Found the MATNR element!");
                             // Write the MATNR element
                             write(writer, event);
